@@ -1,8 +1,25 @@
+from __future__ import division
 import numpy as np
+import math
 import itertools
 import random
 import os
+import copy
 
+
+def weighted_choice(iterable, probability):
+    ''' randomly chooses element according to specified
+    probability densities
+    '''
+    total = sum(probability)
+    if total == 0:
+        return None
+    r = random.uniform(0, total)
+    current = 0
+    for i, p in zip(iterable, probability):
+        current += p
+        if current >= r:
+            return i
 
 
 class Board():
@@ -16,7 +33,7 @@ class Board():
 
     def print_board(self):
         for row in self.board:
-            print row
+            print ' '.join(['{:5s}'.format(str(2 ** i)) if i > 0 else '{:5s}'.format(str(0)) for i in row])
 
     def remove_blank_tile(self, row, pos):
         row[pos] = 0
@@ -50,7 +67,7 @@ class Board():
 
     def random_insert(self):
         possible_inserts = [(y,x) for (y, x) in itertools.combinations_with_replacement(range(self.size), 2) if self.board[y, x] == 0]
-        self.board[random.choice(possible_inserts)] = 1
+        self.board[random.choice(possible_inserts)] = weighted_choice([1, 2], [0.9, 0.1])
 
     def game_over(self):
         if (self.board  == 0).sum() > 0:
@@ -64,35 +81,80 @@ class Board():
         return True
 
 
+
 class Game():
 
-    def __init__(self, size):
-        self.board = Board(size)
+    def __init__(self, size=4):
+        self.game_board = Board(size)
+        self.turn_number = 0
 
-    def play(self):
-        while not self.board.game_over():
-            self.board.print_board()
-            choice = raw_input('')
+    def report_game(self):
+        print 'Final board: '
+        self.game_board.print_board()
+        print
+        print 'Max tile: ', 2 ** self.game_board.board.max()
+
+    def user_play(self):
+        while not self.game_board.game_over():
+            self.game_board.print_board()
+            choice = {'a':0, 'w':1, 'd':2, 's':3}[raw_input('')]
             os.system('clear')
-            self.board.swipe_board(int(choice))
-        self.board.print_board()
-        print 'Game Over'
+            self.game_board.swipe_board(int(choice))
+        self.game_board.print_board()
+        print 'Game over!'
+        self.report_game()
 
     def random_play(self):
-        self.board.print_board()
-        while not self.board.game_over():
+        #self.game_board.print_board()
+        while not self.game_board.game_over():
             choice = random.randint(1,4)
-            print 'Direction', {1:'Up', 2:'Right', 3:'Down', 4:'Left'}[choice]
-            self.board.swipe_board(choice)
-            self.board.print_board()
+            #print 'Direction', {1:'Up', 2:'Right', 3:'Down', 4:'Left'}[choice]
+            self.game_board.swipe_board(choice)
+            self.turn_number += 1
+            #self.game_board.print_board()
+            #print
+        #print 'Game Over'
+        return self.turn_number
+
+    def average_survival(self, direction, trials):
+        total = 0
+        for i in range(trials):
+            temp_game = Game(4)
+            temp_game.game_board.board = np.copy(self.game_board.board)
+            temp_game.game_board.swipe_board(direction)
+            total += temp_game.random_play()
+        return total / trials
+
+    def monty_carlo_choice(self, trials):
+        possible_moves = []
+        for i in range(4):
+            temp_board = Board(4)
+            temp_board.swipe_board(i)
+            if not np.all(np.equal(temp_board.board, self.game_board.board)):
+                possible_moves.append(i)
+        return max(possible_moves, key= lambda i : self.average_survival(i, trials))
+
+    def monty_carlo_play(self, trials):
+        while not self.game_board.game_over():
+            choice = self.monty_carlo_choice(trials)
+            last_move = choice
+            self.game_board.swipe_board(choice)
+            self.turn_number += 1
+            print 'turn', self.turn_number
+            self.game_board.print_board()
             print
-        print 'Game Over'
-
-
+        #print 'Game Over'
+        return self.turn_number
 
 
 if __name__ == '__main__':
-    game = Game(4)
-    game.random_play()
+    #game = Game()
+    #game.user_play()
+    #game.random_play()
+    #game.report_game()
+#
+    game2 = Game()
+    game2.monty_carlo_play(100)
+    game.report_game()
 #
 
