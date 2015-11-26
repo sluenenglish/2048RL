@@ -29,7 +29,7 @@ class Board():
         self.score = 0
         self.size = size
         for i in range(2):
-            self.board[random.randint(0, size-1),random.randint(0, size-1)] = 1
+            self.random_insert()
 
     def print_board(self):
         for row in self.board:
@@ -116,19 +116,25 @@ class Game():
         #print 'Game Over'
         return self.turn_number
 
+
+    def survival_trial(self, direction):
+            temp_game = Game(self.game_board.size)
+            temp_game.game_board.board = np.copy(self.game_board.board)
+            temp_game.game_board.swipe_board(direction)
+            return temp_game.random_play()
+
+
     def average_survival(self, direction, trials):
         total = 0
         for i in range(trials):
-            temp_game = Game(4)
-            temp_game.game_board.board = np.copy(self.game_board.board)
-            temp_game.game_board.swipe_board(direction)
-            total += temp_game.random_play()
+            total += self.survival_trial(direction)
         return total / trials
 
     def monty_carlo_choice(self, trials):
         possible_moves = []
         for i in range(4):
             temp_board = Board(4)
+            temp_board.board = np.copy(self.game_board.board)
             temp_board.swipe_board(i)
             if not np.all(np.equal(temp_board.board, self.game_board.board)):
                 possible_moves.append(i)
