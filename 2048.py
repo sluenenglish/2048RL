@@ -5,6 +5,7 @@ import itertools
 import random
 import os
 import copy
+import multiprocessing as mp
 
 
 def weighted_choice(iterable, probability):
@@ -82,6 +83,18 @@ class Board():
 
 
 
+def survival_trial(game, direction, board):
+        game.game_board.board = np.copy(board)
+        game.game_board.swipe_board(direction)
+        return game.random_play()
+
+
+def average_survival(game, direction, trials):
+    temp_game = Game(game.game_board.size)
+    p = mp.Pool(processes=4)
+    results = [p.apply(survival_trial, args=(temp_game, direction, game.game_board.board)) for i in range(trials)]
+    return sum(results) / trials
+
 class Game():
 
     def __init__(self, size=4):
@@ -117,18 +130,7 @@ class Game():
         return self.turn_number
 
 
-    def survival_trial(self, direction):
-            temp_game = Game(self.game_board.size)
-            temp_game.game_board.board = np.copy(self.game_board.board)
-            temp_game.game_board.swipe_board(direction)
-            return temp_game.random_play()
 
-
-    def average_survival(self, direction, trials):
-        total = 0
-        for i in range(trials):
-            total += self.survival_trial(direction)
-        return total / trials
 
     def monty_carlo_choice(self, trials):
         possible_moves = []
@@ -138,7 +140,7 @@ class Game():
             temp_board.swipe_board(i)
             if not np.all(np.equal(temp_board.board, self.game_board.board)):
                 possible_moves.append(i)
-        return max(possible_moves, key= lambda i : self.average_survival(i, trials))
+        return max(possible_moves, key= lambda i : average_survival(self, i, trials))
 
     def monty_carlo_play(self, trials):
         while not self.game_board.game_over():
