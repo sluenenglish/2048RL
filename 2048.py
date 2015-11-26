@@ -161,6 +161,6 @@ if __name__ == '__main__':
 #
     game2 = Game()
     game2.monty_carlo_play(100)
-    game.report_game()
+    game2.report_game()
 #
 
